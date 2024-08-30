@@ -25,7 +25,7 @@ class RawImageDataset(Dataset):
     def __getitem__(self, idx):
         file_name = self.file_list[idx]
         file_path = os.path.join(self.root_dir, file_name)
-        #print(file_name)
+
         z, x, y = file_name[:-4].split('x')[-3:]
         x = int(x.split('_')[0])
         y = int(y)
@@ -33,17 +33,21 @@ class RawImageDataset(Dataset):
 
         with open(file_path, 'rb') as f:
             raw_data = f.read()
-        #image_data = np.frombuffer(raw_data, dtype='>u2')
-        image_data = np.frombuffer(raw_data, dtype='>u2')
+
+        if "u16be" in file_name:
+            dtype = ">u2"
+        elif "u16le" in file_name:
+            dtype = "<u2"
+        elif "s16be" in file_name:
+            dtype = ">i2"
+        elif "s16le" in file_name:
+            dtype = "<i2"
+        else:
+            raise ValueError("Error: No data type recognized")
+
+        image_data = np.frombuffer(raw_data, dtype=dtype)
         image = image_data.reshape((z, x * y))
         image = image.transpose().astype("float")
-        #noise = np.random.normal(size=image.shape, scale=self.std, loc=self.mean)
-        #image = image + noise
-
-        #image = np.round(image)
-
-        #    image_data = np.fromfile(f, sep="", dtype=self.dtype)
-        #    image = np.reshape(image_data, (x*y, z), order="C").astype("float")
 
         if self.transform:
             image = self.transform(image_data, x, y, z)
